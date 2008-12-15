@@ -348,7 +348,7 @@ osync_bool evo2_etodo_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
         OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
         env->tasks_format = osync_format_env_find_objformat(formatenv, "vtodo20");
 
-        env->tasks_sink = sink;
+        env->tasks_sink = osync_objtype_sink_ref(sink);
 
         osync_objtype_sink_set_functions(env->tasks_sink, functions, NULL);
 	return TRUE;

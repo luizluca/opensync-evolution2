@@ -197,7 +197,7 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 	if (!env)
 		goto error;
 
-	env->pluginInfo = info;
+	env->pluginInfo = osync_plugin_info_ref(info);
 		
 	osync_trace(TRACE_INTERNAL, "Setting change id: %s", osync_plugin_info_get_groupname(info));
 	
