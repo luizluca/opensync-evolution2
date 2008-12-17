@@ -1,3 +1,4 @@
+CMAKE_MINIMUM_REQUIRED( VERSION 2.4.4 )
 PROJECT( libopensync-plugin-evolution2 C )
 
 SET( VERSION "0.38" )
@@ -11,15 +12,14 @@ FIND_PACKAGE( OpenSync REQUIRED )
 FIND_PACKAGE( GLIB2 REQUIRED )
 FIND_PACKAGE( LibXml2 REQUIRED )
 FIND_PACKAGE( GConf2 REQUIRED )
-FIND_PACKAGE( Check )
+
 
 INCLUDE( OpenSyncInternal )
+INCLUDE( Testing )
 
 ADD_SUBDIRECTORY( src )
+ADD_SUBDIRECTORY( tests )
 
-IF ( CHECK_FOUND )
-  ADD_SUBDIRECTORY( tests )
-ENDIF ( CHECK_FOUND )
 
 #############################################
 

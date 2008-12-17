@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#Call as check_int /path/to/evo2-sync/build/dir /path/to/evo2-sync/src/dir
+
+set -x
+
+PLUGINNAME="evo2-sync"
+
+PLUGINPATH="$1/src"
+CFG="$2/src/$PLUGINNAME"
+
+echo "${PLUGINPATH} ${CFG}"
+
+TMPDIR=`mktemp -d /tmp/osplg.XXXXXX` || exit 1
+
+osyncplugin --plugin $PLUGINNAME --pluginpath $PLUGINPATH --config $CFG --configdir $TMPDIR --initialize --finalize || exit 1

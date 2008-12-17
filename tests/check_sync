@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#Call as check_connect /path/to/evo2-sync/build/dir /path/to/evo2-sync/src/dir
+
+set -x
+
+PLUGINNAME="evo2-sync"
+
+PLUGINPATH="$1/src"
+CFG="$2/src/$PLUGINNAME"
+
+TMPDIR=`mktemp -d /tmp/osplg.XXXXXX` || exit 1
+
+osyncplugin --plugin $PLUGINNAME --pluginpath $PLUGINPATH --config $CFG --configdir $TMPDIR --initialize --connect --sync --syncdone --disconnect --finalize || exit 1
