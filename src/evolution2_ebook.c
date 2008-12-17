@@ -304,13 +304,14 @@ error:
 
 osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncError **error)
 {
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, env, info, error);
 	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, "contact");
 	if (!sink)
-		return FALSE;
+		return TRUE;
 	osync_bool sinkEnabled = osync_objtype_sink_is_enabled(sink);
         osync_trace(TRACE_INTERNAL, "%s: enabled => %d", __func__, sinkEnabled);
 	if (!sinkEnabled)
-		return FALSE;
+		return TRUE;
 	
 	OSyncObjTypeSinkFunctions functions;
 	memset(&functions, 0, sizeof(functions));
@@ -346,6 +347,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 	env->contact_sink = osync_objtype_sink_ref(sink);
 
 	osync_objtype_sink_set_functions(sink, functions, NULL);
+	osync_trace(TRACE_EXIT, "%s", __func__);
 	return TRUE;
 }
 

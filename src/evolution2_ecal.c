@@ -312,11 +312,11 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncEr
 {
 	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, "event");
         if (!sink)
-                return FALSE;
+                return TRUE;
         osync_bool sinkEnabled = osync_objtype_sink_is_enabled(sink);
         osync_trace(TRACE_INTERNAL, "%s: enabled => %d", __func__, sinkEnabled);
         if (!sinkEnabled)
-                return FALSE;
+                return TRUE;
 
         OSyncObjTypeSinkFunctions functions;
         memset(&functions, 0, sizeof(functions));
