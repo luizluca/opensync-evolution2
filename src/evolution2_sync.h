@@ -16,9 +16,6 @@
 #include <libebook/e-book.h>
 #include <libebook/e-vcard.h>
 
-#include <libxml/xmlmemory.h>
-#include <libxml/parser.h>
-
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
