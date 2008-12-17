@@ -347,6 +347,7 @@ osync_bool evo2_memo_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncEr
 
         OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
         env->memos_format = osync_format_env_find_objformat(formatenv, "vjournal");
+        assert(env->memos_format);
 
         env->memos_sink = osync_objtype_sink_ref(sink);
 

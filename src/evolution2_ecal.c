@@ -347,6 +347,7 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncEr
 
         OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
         env->calendar_format = osync_format_env_find_objformat(formatenv, "vevent20");
+        assert(env->calendar_format);
 
         env->calendar_sink = osync_objtype_sink_ref(sink);
 
