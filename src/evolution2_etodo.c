@@ -18,7 +18,14 @@
  * 
  */
  
-#include "evolution2_sync.h"
+#include <string.h>
+
+#include <opensync/opensync.h>
+#include <opensync/opensync-data.h>
+#include <opensync/opensync-format.h>
+#include <opensync/opensync-plugin.h>
+
+#include "evolution2_etodo.h"
 
 static void evo2_etodo_connect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
 {

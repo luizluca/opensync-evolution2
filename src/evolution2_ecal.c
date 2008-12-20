@@ -18,70 +18,90 @@
  * 
  */
  
-#include "evolution2_sync.h"
+#include <string.h>
 
-static void evo2_ecal_connect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
+#include <opensync/opensync.h>
+#include <opensync/opensync-data.h>
+#include <opensync/opensync-format.h>
+#include <opensync/opensync-plugin.h>
+
+#include "evolution2_ecal.h"
+
+ECal *evo2_ecal_open_cal(char *path, OSyncError **error)
 {
-        OSyncError *error = NULL;
-        GError *gerror = NULL;
+	ECal *calendar = NULL;
+	GError *gerror = NULL;
         ESourceList *sources = NULL;
         ESource *source = NULL;
 
-        osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
-        OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
-        OSyncEvoEnv *env = (OSyncEvoEnv *)data;
-
-        if (!env->calendar_path) {
-                osync_error_set(&error, OSYNC_ERROR_GENERIC, "no calendar path set");
+	if (!path) {
+                osync_error_set(error, OSYNC_ERROR_GENERIC, "no calendar path set");
                 goto error;
         }
 
-        if (strcmp(env->calendar_path, "default")) {
+        if (strcmp(path, "default")) {
                 if (!e_cal_get_sources(&sources, E_CAL_SOURCE_TYPE_EVENT, &gerror)) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to get sources for calendar: %s", gerror ? gerror->message : "None");
+                        osync_error_set(error, OSYNC_ERROR_GENERIC, "Unable to get sources for calendar: %s", gerror ? gerror->message : "None");
                         goto error;
                 }
                 
-                if (!(source = evo2_find_source(sources, g_strdup(env->calendar_path)))) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Error finding source \"%s\"", env->calendar_path);
+                if (!(source = evo2_find_source(sources, path))) {
+                        osync_error_set(error, OSYNC_ERROR_GENERIC, "Error finding source \"%s\"", path);
                         goto error;
                 }
  
-                if (!(env->calendar = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT))) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to create new calendar");
+                if (!(calendar = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT))) {
+                        osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to create new calendar");
 			goto error;
 		}
 
-		if(!e_cal_open(env->calendar, FALSE, &gerror)) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to open calendar: %s", gerror ? gerror->message : "None");
+		if(!e_cal_open(calendar, FALSE, &gerror)) {
+                        osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to open calendar: %s", gerror ? gerror->message : "None");
                         goto error_free_event;
                 }
         } else {
                 osync_trace(TRACE_INTERNAL, "Opening default calendar\n");
-                if (!e_cal_open_default(&env->calendar, E_CAL_SOURCE_TYPE_EVENT, NULL, NULL, &gerror)) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to open default calendar: %s", gerror ? gerror->message : "None");
+                if (!e_cal_open_default(&calendar, E_CAL_SOURCE_TYPE_EVENT, NULL, NULL, &gerror)) {
+                        osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to open default calendar: %s", gerror ? gerror->message : "None");
                         goto error_free_event;
                 }
         }
+	osync_trace(TRACE_EXIT, "%s", __func__);
+	return calendar;
+	
+ error_free_event:
+	g_object_unref(calendar);
+ error:
+	if (gerror)
+		g_clear_error(&gerror);
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(error));
+	return NULL;
+}
+
+static void evo2_ecal_connect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
+{
+        OSyncError *error = NULL;
+       
+        osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
+        OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+        OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+
+	if (!(env->calendar = evo2_ecal_open_cal(osync_strdup(env->calendar_path), &error))) {
+		goto error;
+	}
 
         char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
         if (!osync_anchor_compare(anchorpath, "event", env->calendar_path))
                 osync_objtype_sink_set_slowsync(sink, TRUE);
         g_free(anchorpath);
 
-
         osync_context_report_success(ctx);
 
         osync_trace(TRACE_EXIT, "%s", __func__);
         return;
 
-error_free_event:
-                g_object_unref(env->calendar);
-                env->calendar = NULL;
 error:
-        if (gerror)
-                g_clear_error(&gerror);
-        osync_context_report_osyncerror(ctx, error);
+	osync_context_report_osyncerror(ctx, error);
         osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
         osync_error_unref(&error);
 }
@@ -308,6 +328,39 @@ error:
         osync_error_unref(&error);
 }
 
+osync_bool evo2_ecal_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncError **error)
+{
+	ECal *cal = NULL;
+	GError *gerror = NULL;
+	gboolean read_only;
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, env, caps, error);
+
+	if (env->calendar_sink) {
+		if (!(cal = evo2_ecal_open_cal(osync_strdup(env->calendar_path), error))) {
+			goto error;
+		}
+		if (!e_cal_is_read_only(cal, &read_only, &gerror)) {
+			osync_error_set(error, OSYNC_ERROR_GENERIC, "Could not determine if source was read only: %s", gerror ? gerror->message : "None");
+			goto error_free_cal;
+		}
+		g_object_unref(cal);
+
+		osync_objtype_sink_set_write(env->contact_sink, !read_only);
+		osync_trace(TRACE_INTERNAL, "Set sink write status to %s", read_only ? "FALSE" : "TRUE");
+
+	}
+	osync_trace(TRACE_EXIT, "%s", __func__);
+	return TRUE;
+
+ error_free_cal:
+	g_object_unref(cal);
+ error:
+	if (gerror)
+		g_clear_error(&gerror);
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(error));
+        return FALSE;
+}
+
 osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncError **error)
 {
 	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, "event");
@@ -354,4 +407,3 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncEr
         osync_objtype_sink_set_functions(env->calendar_sink, functions, NULL);
 	return TRUE;
 }
-

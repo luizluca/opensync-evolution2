@@ -18,7 +18,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  * 
  */
- 
+#include <libedataserver/eds-version.h>
+
+#include <opensync/opensync.h>
+#include <opensync/opensync-merger.h>
+#include <opensync/opensync-plugin.h>
+#include <opensync/opensync-version.h>
+
 #include "evolution2_sync.h"
 
 static void free_env(OSyncEvoEnv *env)
@@ -244,17 +250,25 @@ static void evo2_finalize(void *data)
 	osync_trace(TRACE_EXIT, "%s", __func__);
 }
 
-/* Here we actually tell opensync which sinks are available. For this plugin, we
- * go through the list of directories and enable all, since all have been configured */
+static char *evo2_determine_version()
+{
+        char *version = osync_strdup_printf("%i.%i.%i", eds_major_version, eds_minor_version, eds_micro_version);
+	return version;
+}
+
+
+/* Here we actually tell opensync which sinks are available and their capabilities */
+
 static osync_bool evo2_discover(void *data, OSyncPluginInfo *info, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, error);
 	
-/*
+
 	GError* gerror = NULL;
 	GList* fields = NULL;
+
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
-*/	
+	
         int i, numobjs = osync_plugin_info_num_objtypes(info);
         for (i = 0; i < numobjs; i++) {
                 OSyncObjTypeSink *sink = osync_plugin_info_nth_objtype(info, i);
@@ -267,52 +281,34 @@ static osync_bool evo2_discover(void *data, OSyncPluginInfo *info, OSyncError **
 	osync_version_set_plugin(version, "Evolution");
 	osync_version_set_modelversion(version, "2");
 	//osync_version_set_firmwareversion(version, "firmwareversion");
-	//osync_version_set_softwareversion(version, "softwareversion");
+	char *evo_version = evo2_determine_version();
+	if (!evo_version) {
+		goto error;
+	}
+	osync_version_set_softwareversion(version, evo_version);
+	osync_free(evo_version);
 	//osync_version_set_hardwareversion(version, "hardwareversion");
 	osync_plugin_info_set_version(info, version);
 	osync_version_unref(version);
 
-/* generate wrong capabilities format : those are evolution2 capabilities format not xmlformat capabilities
- * FIXME : either create a mapping between evolution2 capabilities and xmlformat one or ship an evolution2 xmlformat type capabilities file and load it there
-	EBook* ebook;
-	if (!(ebook = e_book_new_default_addressbook(&gerror))) {
-		osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to alloc new default addressbook: %s", gerror ? gerror->message : "None");
-		goto error;
+	OSyncCapabilities *capabilities;
+	capabilities = osync_capabilities_new(error);
+	if (!evo2_ebook_discover(env, capabilities, error)) {
+		goto error_free_capabilties;
 	}
-	if (!e_book_open(ebook, TRUE, &gerror)) {
-		osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to open addressbook: %s", gerror ? gerror->message : "None");
-	  	goto error_free_book;
+	if (!evo2_ecal_discover(env, capabilities, error)) {
+		goto error_free_capabilties;
 	}
-	if (!(e_book_get_supported_fields (ebook, &fields, &gerror))) {
-		osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to get supported fields: %s", gerror ? gerror->message : "None");
-		goto error_free_book;
-	}
-	
-	OSyncCapabilities* capabilities = osync_capabilities_new(error);
-	if(capabilities == NULL)
-		goto error;
-	
-	for(; fields; fields = g_list_next(fields))
-	{
-		osync_capability_new(capabilities, "contact", fields->data, error);
-		g_free(fields->data);	
-	}
-	g_list_free(fields);
-	
-	g_object_unref(ebook);
-	
+
 	osync_plugin_info_set_capabilities(info, capabilities);
 	osync_capabilities_unref(capabilities);
-*/
-	
+
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return TRUE;
 
-/*
-error_free_book:
-		g_object_unref(env->addressbook);
-*/
-error:
+ error_free_capabilties:
+	osync_capabilities_unref(capabilities);
+ error:
 	osync_trace(TRACE_ERROR, "%s: %s", __func__, osync_error_print(error));
 	return FALSE;
 }

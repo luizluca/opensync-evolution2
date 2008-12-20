@@ -7,6 +7,7 @@ SET( evo2_sync_LIB_SRCS
   evolution2_ecal.c
   evolution2_memo.c
   evolution2_etodo.c
+  evolution2_capabilities.c
 )
 
 OPENSYNC_PLUGIN_ADD( evo2-sync ${evo2_sync_LIB_SRCS} ) 

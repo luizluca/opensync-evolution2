@@ -17,69 +17,141 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  * 
  */
- 
-#include "evolution2_sync.h"
 
-static void evo2_ebook_connect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
+#include <string.h>
+
+#include <opensync/opensync.h>
+#include <opensync/opensync-data.h>
+#include <opensync/opensync-format.h>
+#include <opensync/opensync-plugin.h>
+
+#include "evolution2_ebook.h"
+
+EBook *evo2_ebook_open_book(char *path, OSyncError **error) 
 {
-	OSyncError *error = NULL;
+	EBook *addressbook = NULL;
 	GError *gerror = NULL;
 	ESourceList *sources = NULL;
 	ESource *source = NULL;
-	
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
-	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
-	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
-	
-	if (!env->addressbook_path) {
-		osync_error_set(&error, OSYNC_ERROR_GENERIC, "no addressbook path set");
+	osync_trace(TRACE_ENTRY, "%s(%s, %p)", __func__, path, error);
+
+	if (!path) {
+		osync_error_set(error, OSYNC_ERROR_GENERIC, "no addressbook path set");
 	  	goto error;
 	}
 
-	if (strcmp(env->addressbook_path, "default")) {
+	if (strcmp(path, "default")) {
 		if (!e_book_get_addressbooks(&sources, &gerror)) {
-	  		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Error getting addressbooks: %s", gerror ? gerror->message : "None");
+	  		osync_error_set(error, OSYNC_ERROR_GENERIC, "Error getting addressbooks: %s", gerror ? gerror->message : "None");
 	  		goto error;
 		}
 		
-		if (!(source = evo2_find_source(sources, g_strdup(env->addressbook_path)))) {
-			osync_error_set(&error, OSYNC_ERROR_GENERIC, "Error finding source \"%s\"", env->addressbook_path);
+		if (!(source = evo2_find_source(sources, path))) {
+			osync_error_set(error, OSYNC_ERROR_GENERIC, "Error finding source \"%s\"", path);
 	  		goto error;
 		}
 		
-		if (!(env->addressbook = e_book_new(source, &gerror))) {
-			osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to alloc new addressbook: %s", gerror ? gerror->message : "None");
+		if (!(addressbook = e_book_new(source, &gerror))) {
+			osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to alloc new addressbook: %s", gerror ? gerror->message : "None");
 	  		goto error;
 		}
 	} else {
 		osync_trace(TRACE_INTERNAL, "Opening default addressbook\n");
-		if (!(env->addressbook = e_book_new_default_addressbook(&gerror))) {
-			osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to alloc new default addressbook: %s", gerror ? gerror->message : "None");
+		if (!(addressbook = e_book_new_default_addressbook(&gerror))) {
+			osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to alloc new default addressbook: %s", gerror ? gerror->message : "None");
 	  		goto error;
 		}
+	}
+
+	if (!e_book_open(addressbook, TRUE, &gerror)) {
+		osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to alloc new addressbook: %s", gerror ? gerror->message : "None");
+	  	goto error_free_book;
+	}
+
+	osync_trace(TRACE_EXIT, "%s", __func__);
+	return addressbook;
+
+
+ error_free_book:
+	g_object_unref(addressbook);
+ error:
+	if (gerror)
+		g_clear_error(&gerror);
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(error));
+	return NULL;
+
+}
+
+osync_bool evo2_ebook_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncError **error) 
+{
+	EBook *book = NULL;
+	GList *fields = NULL;
+	GError *gerror = NULL;
+	gboolean success;
+	gboolean writable;
+
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, env, caps, error);
+	osync_assert(env);
+	osync_assert(caps);
+
+	if (env->contact_sink) {
+		if (!(book = evo2_ebook_open_book(osync_strdup(env->addressbook_path), error))) {
+			goto error;
+		}
+		writable = e_book_is_writable(book);
+		osync_objtype_sink_set_write(env->contact_sink, writable);
+		osync_trace(TRACE_INTERNAL, "Set sink write status to %s", writable ? "TRUE" : "FALSE");
+
+		success = e_book_get_supported_fields (book, &fields, &gerror);
+		g_object_unref(book);
+		if (!success) {
+			osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to get supported fields: %s", gerror ? gerror->message : "None");
+			goto error;
+		}
+		
+		success = evo2_capbilities_translate_ebook(caps, fields, error);
+		while (fields) {
+			g_free(fields->data);
+			fields = g_list_remove(fields, fields->data);
+		}
+		if (!success) {
+			goto error;
+		}
+	}
+	osync_trace(TRACE_EXIT, "%s", __func__);
+	return TRUE;
+ error:
+	if (gerror)
+		g_clear_error(&gerror);
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(error));
+	return FALSE;
+
+}
+
+static void evo2_ebook_connect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
+{
+	OSyncError *error = NULL;
+	
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
+	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+
+	if (!(env->addressbook = evo2_ebook_open_book(osync_strdup(env->addressbook_path), &error))) {
+		goto error;
 	}
 	
 	char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
 	if (!osync_anchor_compare(anchorpath, "contact", env->addressbook_path))
 		osync_objtype_sink_set_slowsync(sink, TRUE);
 	g_free(anchorpath);
-	
-	if (!e_book_open(env->addressbook, TRUE, &gerror)) {
-		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to alloc new addressbook: %s", gerror ? gerror->message : "None");
-	  	goto error_free_book;
-	}
+
 	
 	osync_context_report_success(ctx);
 	
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return;
 	
-error_free_book:
-		g_object_unref(env->addressbook);
-		env->addressbook = NULL;
 error:
-	if (gerror)
-		g_clear_error(&gerror);
 	osync_context_report_osyncerror(ctx, error);
 	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
 	osync_error_unref(&error);
@@ -326,7 +398,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 	env->addressbook_path = osync_plugin_resource_get_url(resource);
 	if(!env->addressbook_path) {
 		osync_error_set(error,OSYNC_ERROR_GENERIC, "Addressbook url not set");
-		return FALSE;
+		goto error;
 	}
 	OSyncList *objformatsinks = osync_plugin_resource_get_objformat_sinks(resource);
 	osync_bool hasObjFormat = FALSE;
@@ -337,7 +409,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 	}
         if (!hasObjFormat) {
 		osync_error_set(error, OSYNC_ERROR_GENERIC, "Format vcard30 not set.");
-		return FALSE;
+		goto error;
 	}
 
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
@@ -349,5 +421,9 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 	osync_objtype_sink_set_functions(sink, functions, NULL);
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return TRUE;
+
+ error:
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(error));
+	return FALSE;
 }
 

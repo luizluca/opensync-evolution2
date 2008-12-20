@@ -17,8 +17,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  * 
  */
+
+#include <string.h>
+
+#include <opensync/opensync.h>
+#include <opensync/opensync-data.h>
+#include <opensync/opensync-format.h>
+#include <opensync/opensync-plugin.h>
  
-#include "evolution2_sync.h"
+#include "evolution2_memo.h"
 
 static void evo2_memo_connect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
 {

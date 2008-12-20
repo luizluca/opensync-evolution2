@@ -4,23 +4,10 @@
 //#include "evo2_sync.h"
 
 #include <opensync/opensync.h>
-#include <opensync/opensync-format.h>
-#include <opensync/opensync-plugin.h>
-#include <opensync/opensync-context.h>
-#include <opensync/opensync-data.h>
-#include <opensync/opensync-helper.h>
-#include <opensync/opensync-merger.h>
-#include <opensync/opensync-version.h>
 
 #include <libecal/e-cal.h>
 #include <libebook/e-book.h>
-#include <libebook/e-vcard.h>
-
-#include <fcntl.h>
-#include <errno.h>
-#include <stdio.h>
-#include <sys/stat.h>
-#include <string.h>
+#include <libedataserver/e-data-server-util.h>
 
 typedef struct evo2_location {
 	char *name;
@@ -54,11 +41,5 @@ typedef struct OSyncEvoEnv {
 } OSyncEvoEnv;
 
 ESource *evo2_find_source(ESourceList *list, char *uri);
-void evo2_report_change(OSyncContext *ctx, OSyncObjFormat *format, char *data, unsigned int size, const char *uid, OSyncChangeType changetype);
-
-#include "evolution2_ebook.h"
-#include "evolution2_ecal.h"
-#include "evolution2_memo.h"
-#include "evolution2_etodo.h"
 
 #endif
