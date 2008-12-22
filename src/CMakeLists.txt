@@ -5,8 +5,6 @@ SET( evo2_sync_LIB_SRCS
   evolution2_sync.c 
   evolution2_ebook.c
   evolution2_ecal.c
-  evolution2_memo.c
-  evolution2_etodo.c
   evolution2_capabilities.c
 )
 

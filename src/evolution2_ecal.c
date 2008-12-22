@@ -27,7 +27,7 @@
 
 #include "evolution2_ecal.h"
 
-ECal *evo2_ecal_open_cal(char *path, OSyncError **error)
+ECal *evo2_ecal_open_cal(char *path, ECalSourceType source_type, OSyncError **error)
 {
 	ECal *calendar = NULL;
 	GError *gerror = NULL;
@@ -35,12 +35,12 @@ ECal *evo2_ecal_open_cal(char *path, OSyncError **error)
         ESource *source = NULL;
 
 	if (!path) {
-                osync_error_set(error, OSYNC_ERROR_GENERIC, "no calendar path set");
+                osync_error_set(error, OSYNC_ERROR_GENERIC, "No path set");
                 goto error;
         }
 
         if (strcmp(path, "default")) {
-                if (!e_cal_get_sources(&sources, E_CAL_SOURCE_TYPE_EVENT, &gerror)) {
+                if (!e_cal_get_sources(&sources,source_type, &gerror)) {
                         osync_error_set(error, OSYNC_ERROR_GENERIC, "Unable to get sources for calendar: %s", gerror ? gerror->message : "None");
                         goto error;
                 }
@@ -50,7 +50,7 @@ ECal *evo2_ecal_open_cal(char *path, OSyncError **error)
                         goto error;
                 }
  
-                if (!(calendar = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT))) {
+                if (!(calendar = e_cal_new(source, source_type))) {
                         osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to create new calendar");
 			goto error;
 		}
@@ -61,7 +61,7 @@ ECal *evo2_ecal_open_cal(char *path, OSyncError **error)
                 }
         } else {
                 osync_trace(TRACE_INTERNAL, "Opening default calendar\n");
-                if (!e_cal_open_default(&calendar, E_CAL_SOURCE_TYPE_EVENT, NULL, NULL, &gerror)) {
+                if (!e_cal_open_default(&calendar, source_type, NULL, NULL, &gerror)) {
                         osync_error_set(error, OSYNC_ERROR_GENERIC, "Failed to open default calendar: %s", gerror ? gerror->message : "None");
                         goto error_free_event;
                 }
@@ -84,14 +84,16 @@ static void evo2_ecal_connect(void *data, OSyncPluginInfo *info, OSyncContext *c
        
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
         OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
+
         OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 
-	if (!(env->calendar = evo2_ecal_open_cal(osync_strdup(env->calendar_path), &error))) {
+	if (!(evo_cal->calendar = evo2_ecal_open_cal(osync_strdup(evo_cal->uri), evo_cal->source_type, &error))) {
 		goto error;
 	}
 
         char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
-        if (!osync_anchor_compare(anchorpath, "event", env->calendar_path))
+        if (!osync_anchor_compare(anchorpath, evo_cal->objtype, evo_cal->uri))
                 osync_objtype_sink_set_slowsync(sink, TRUE);
         g_free(anchorpath);
 
@@ -111,9 +113,12 @@ static void evo2_ecal_disconnect(void *data, OSyncPluginInfo *info, OSyncContext
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
         OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 
-        if (env->calendar) {
-                g_object_unref(env->calendar);
-                env->calendar = NULL;
+	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
+
+        if (evo_cal->calendar) {
+                g_object_unref(evo_cal->calendar);
+                evo_cal->calendar = NULL;
         }
 
         osync_context_report_success(ctx);
@@ -126,13 +131,16 @@ static void evo2_ecal_sync_done(void *data, OSyncPluginInfo *info, OSyncContext 
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
         OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 
+	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
+
         char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
-        osync_anchor_update(anchorpath, "event", env->calendar_path);
+        osync_anchor_update(anchorpath, evo_cal->objtype, evo_cal->uri);
         g_free(anchorpath);
 
 
         GList *changes = NULL;
-        e_cal_get_changes(env->calendar, env->change_id, &changes, NULL);
+        e_cal_get_changes(evo_cal->calendar, env->change_id, &changes, NULL);
  
         osync_context_report_success(ctx);
         
@@ -185,10 +193,12 @@ static void evo2_ecal_get_changes(void *indata, OSyncPluginInfo *info, OSyncCont
         int datasize = 0;
         GError *gerror = NULL;
 
+	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
+
         if (osync_objtype_sink_get_slowsync(sink) == FALSE) {
-                osync_trace(TRACE_INTERNAL, "No slow_sync for calendar");
-                if (!e_cal_get_changes(env->calendar, env->change_id, &changes, &gerror)) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to open changed calendar entries: %s", gerror ? gerror->message : "None");
+                osync_trace(TRACE_INTERNAL, "No slow_sync for %s", evo_cal->objtype);
+                if (!e_cal_get_changes(evo_cal->calendar, env->change_id, &changes, &gerror)) {
+                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to open changed %s entries: %s", evo_cal->objtype, gerror ? gerror->message : "None");
                         goto error;
                 }
                 osync_trace(TRACE_INTERNAL, "Found %i changes for change-ID %s", g_list_length(changes), env->change_id);
@@ -200,33 +210,33 @@ static void evo2_ecal_get_changes(void *indata, OSyncPluginInfo *info, OSyncCont
 			e_cal_component_strip_errors(ecc->comp);
 			switch (ecc->type) {
 				case E_CAL_CHANGE_ADDED:
-					data = e_cal_get_component_as_string(env->calendar, e_cal_component_get_icalcomponent(ecc->comp));
+					data = e_cal_get_component_as_string(evo_cal->calendar, e_cal_component_get_icalcomponent(ecc->comp));
 					datasize = strlen(data) + 1;
-					evo2_ecal_report_change(ctx, env->calendar_format, data, datasize, uid, OSYNC_CHANGE_TYPE_ADDED);
+					evo2_ecal_report_change(ctx, evo_cal->format, data, datasize, uid, OSYNC_CHANGE_TYPE_ADDED);
 					break;
 				case E_CAL_CHANGE_MODIFIED:
-					data = e_cal_get_component_as_string(env->calendar, e_cal_component_get_icalcomponent(ecc->comp));
+					data = e_cal_get_component_as_string(evo_cal->calendar, e_cal_component_get_icalcomponent(ecc->comp));
 					datasize = strlen(data) + 1;
-					evo2_ecal_report_change(ctx, env->calendar_format, data, datasize, uid, OSYNC_CHANGE_TYPE_MODIFIED);
+					evo2_ecal_report_change(ctx, evo_cal->format, data, datasize, uid, OSYNC_CHANGE_TYPE_MODIFIED);
 					break;
 				case E_CAL_CHANGE_DELETED:
-					evo2_ecal_report_change(ctx, env->calendar_format, NULL, 0, uid, OSYNC_CHANGE_TYPE_DELETED);
+					evo2_ecal_report_change(ctx, evo_cal->format, NULL, 0, uid, OSYNC_CHANGE_TYPE_DELETED);
 					break;
 			}
                 }
         } else {
-                osync_trace(TRACE_INTERNAL, "slow_sync for calendar");
-	        if (!e_cal_get_object_list_as_comp (env->calendar, "(contains? \"any\" \"\")", &changes, &gerror)) {
-                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to get changes from calendar: %s", gerror ? gerror->message : "None");
+                osync_trace(TRACE_INTERNAL, "slow_sync for %s", evo_cal->objtype);
+	        if (!e_cal_get_object_list_as_comp (evo_cal->calendar, "(contains? \"any\" \"\")", &changes, &gerror)) {
+                        osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to get %s changes: %s",  evo_cal->objtype, gerror ? gerror->message : "None");
                         goto error;
         	}
 		for (l = changes; l; l = l->next) {
 			ECalComponent *comp = E_CAL_COMPONENT (l->data);
-			char *data = e_cal_get_component_as_string(env->calendar, e_cal_component_get_icalcomponent(comp));
+			char *data = e_cal_get_component_as_string(evo_cal->calendar, e_cal_component_get_icalcomponent(comp));
 			const char *uid = NULL;
 			e_cal_component_get_uid(comp, &uid);
 			int datasize = strlen(data) + 1;
-			evo2_ecal_report_change(ctx, env->calendar_format, data, datasize, uid, OSYNC_CHANGE_TYPE_ADDED);
+			evo2_ecal_report_change(ctx, evo_cal->format, data, datasize, uid, OSYNC_CHANGE_TYPE_ADDED);
 			g_object_unref (comp);
 		}
 	}
@@ -257,10 +267,13 @@ static void evo2_ecal_modify(void *data, OSyncPluginInfo *info, OSyncContext *ct
         OSyncData *odata = NULL;
         char *plain = NULL;
 
+	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
+
         switch (osync_change_get_changetype(change)) {
                 case OSYNC_CHANGE_TYPE_DELETED:
-                        if (!e_cal_remove_object(env->calendar, uid, &gerror)) {
-                                osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to delete event: %s", gerror ? gerror->message : "None");
+                        if (!e_cal_remove_object(evo_cal->calendar, uid, &gerror)) {
+                                osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to delete %s: %s", evo_cal->objtype, gerror ? gerror->message : "None");
                                 goto error;
                         }
                         break;
@@ -269,18 +282,18 @@ static void evo2_ecal_modify(void *data, OSyncPluginInfo *info, OSyncContext *ct
                         osync_data_get_data(odata, &plain, NULL);
 			icomp = icalcomponent_new_from_string(plain);
 			if (!icomp) {
-				osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Unable to convert event");
+				osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Unable to convert %s", evo_cal->objtype);
 				goto error;
 			}
 			
-			icomp = icalcomponent_get_first_component (icomp, ICAL_VEVENT_COMPONENT);
+			icomp = icalcomponent_get_first_component (icomp, evo_cal->ical_component);
 			if (!icomp) {
-				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to get event");
+				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to get %s", evo_cal->objtype);
 				goto error;
 			}
 			
-			if (!e_cal_create_object(env->calendar, icomp, &returnuid, &gerror)) {
-				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to create event: %s", gerror ? gerror->message : "None");
+			if (!e_cal_create_object(evo_cal->calendar, icomp, &returnuid, &gerror)) {
+				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to create %s: %s", evo_cal->objtype, gerror ? gerror->message : "None");
 				goto error;
 			}
 			osync_change_set_uid(change, returnuid);
@@ -291,22 +304,22 @@ static void evo2_ecal_modify(void *data, OSyncPluginInfo *info, OSyncContext *ct
 
 			icomp = icalcomponent_new_from_string(plain);
 			if (!icomp) {
-				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to convert event2");
+				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to convert %s", evo_cal->objtype);
 				goto error;
 			}
 			
-			icomp = icalcomponent_get_first_component (icomp, ICAL_VEVENT_COMPONENT);
+			icomp = icalcomponent_get_first_component (icomp, evo_cal->ical_component);
 			if (!icomp) {
-				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to get event2");
+				osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to get %s", evo_cal->objtype);
 				goto error;
 			}
 			
 			icalcomponent_set_uid (icomp, uid);
-			if (!e_cal_modify_object(env->calendar, icomp, CALOBJ_MOD_ALL, &gerror)) {
-				osync_trace(TRACE_INTERNAL, "unable to mod event: %s", gerror ? gerror->message : "None");
+			if (!e_cal_modify_object(evo_cal->calendar, icomp, CALOBJ_MOD_ALL, &gerror)) {
+				osync_trace(TRACE_INTERNAL, "unable to mod %s: %s", evo_cal->objtype, gerror ? gerror->message : "None");
 				g_clear_error(&gerror);
-				if (!e_cal_create_object(env->calendar, icomp, &returnuid, &gerror)) {
-					osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to create event: %s", gerror ? gerror->message : "None");
+				if (!e_cal_create_object(evo_cal->calendar, icomp, &returnuid, &gerror)) {
+					osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to create %s: %s", evo_cal->objtype, gerror ? gerror->message : "None");
 					goto error;
 				}
 			}
@@ -328,15 +341,15 @@ error:
         osync_error_unref(&error);
 }
 
-osync_bool evo2_ecal_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncError **error)
+osync_bool evo2_ecal_discover(OSyncEvoCalendar *evo_cal, OSyncCapabilities *caps, OSyncError **error)
 {
 	ECal *cal = NULL;
 	GError *gerror = NULL;
 	gboolean read_only;
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, env, caps, error);
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, evo_cal, caps, error);
 
-	if (env->calendar_sink) {
-		if (!(cal = evo2_ecal_open_cal(osync_strdup(env->calendar_path), error))) {
+	if (evo_cal->sink) {
+		if (!(cal = evo2_ecal_open_cal(osync_strdup(evo_cal->uri), evo_cal->source_type, error))) {
 			goto error;
 		}
 		if (!e_cal_is_read_only(cal, &read_only, &gerror)) {
@@ -345,7 +358,7 @@ osync_bool evo2_ecal_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncEr
 		}
 		g_object_unref(cal);
 
-		osync_objtype_sink_set_write(env->contact_sink, !read_only);
+		osync_objtype_sink_set_write(evo_cal->sink, !read_only);
 		osync_trace(TRACE_INTERNAL, "Set sink write status to %s", read_only ? "FALSE" : "TRUE");
 
 	}
@@ -361,9 +374,15 @@ osync_bool evo2_ecal_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncEr
         return FALSE;
 }
 
-osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncError **error)
+osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, char *objtype, char *required_format, OSyncError **error)
 {
-	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, "event");
+
+	osync_assert(env);
+	osync_assert(info);
+	osync_assert(objtype);
+	osync_assert(required_format);
+
+	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
         if (!sink)
                 return TRUE;
         osync_bool sinkEnabled = osync_objtype_sink_is_enabled(sink);
@@ -379,11 +398,17 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncEr
         functions.commit = evo2_ecal_modify;
         functions.sync_done = evo2_ecal_sync_done;
 
+	OSyncEvoCalendar *cal = osync_try_malloc0(sizeof(OSyncEvoCalendar), error);
+	if (!cal) {
+		return FALSE;
+	}
+	cal->objtype = objtype;
+
 	OSyncPluginConfig *config = osync_plugin_info_get_config(info);
-        OSyncPluginResource *resource = osync_plugin_config_find_active_resource(config, "event");
-        env->calendar_path = osync_plugin_resource_get_url(resource);
-        if(!env->calendar_path) {
-                osync_error_set(error,OSYNC_ERROR_GENERIC, "Calendar url not set");
+        OSyncPluginResource *resource = osync_plugin_config_find_active_resource(config, objtype);
+        cal->uri = osync_plugin_resource_get_url(resource);
+        if(!cal->uri) {
+                osync_error_set(error,OSYNC_ERROR_GENERIC, "%s url not set", objtype);
                 return FALSE;
         }
         OSyncList *objformatsinks = osync_plugin_resource_get_objformat_sinks(resource);
@@ -391,19 +416,35 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncEr
         OSyncList *r;
         for(r = objformatsinks;r;r = r->next) {
                 OSyncObjFormatSink *objformatsink = r->data;
-                if(!strcmp("vevent20", osync_objformat_sink_get_objformat(objformatsink))) { hasObjFormat = TRUE; break;}
+                if(!strcmp(required_format, osync_objformat_sink_get_objformat(objformatsink))) { hasObjFormat = TRUE; break;}
         }
         if (!hasObjFormat) {
-                osync_error_set(error, OSYNC_ERROR_GENERIC, "Format vevent20 not set.");
+                osync_error_set(error, OSYNC_ERROR_GENERIC, "Format %s not set.", required_format);
                 return FALSE;
         }
 
         OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
-        env->calendar_format = osync_format_env_find_objformat(formatenv, "vevent20");
-        assert(env->calendar_format);
+        cal->format = osync_format_env_find_objformat(formatenv, required_format);
+        assert(cal->format);
+	osync_objformat_ref(cal->format);
+	
+	if (strcmp(cal->objtype, "event") == 0) {
+		cal->source_type = E_CAL_SOURCE_TYPE_EVENT;
+		cal->ical_component = ICAL_VEVENT_COMPONENT;
+	} else if (strcmp(cal->objtype, "todo") == 0) {
+		cal->source_type = E_CAL_SOURCE_TYPE_TODO;
+		cal->ical_component = ICAL_VTODO_COMPONENT;
+	} else if (strcmp(cal->objtype, "note") == 0) {
+		cal->source_type = E_CAL_SOURCE_TYPE_JOURNAL;
+		cal->ical_component = ICAL_VJOURNAL_COMPONENT;
+	} else {
+		return FALSE;
+	}
 
-        env->calendar_sink = osync_objtype_sink_ref(sink);
+        cal->sink = osync_objtype_sink_ref(sink);
 
-        osync_objtype_sink_set_functions(env->calendar_sink, functions, NULL);
+        osync_objtype_sink_set_functions(cal->sink, functions, cal);
+
+	env->calendars = g_list_append(env->calendars, cal);
 	return TRUE;
 }

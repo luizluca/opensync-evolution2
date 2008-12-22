@@ -95,7 +95,7 @@ osync_bool evo2_ebook_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncE
 	osync_assert(caps);
 
 	if (env->contact_sink) {
-		if (!(book = evo2_ebook_open_book(osync_strdup(env->addressbook_path), error))) {
+		if (!(book = evo2_ebook_open_book(g_strdup(env->addressbook_path), error))) {
 			goto error;
 		}
 		writable = e_book_is_writable(book);
@@ -378,12 +378,16 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, env, info, error);
 	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, "contact");
-	if (!sink)
+	if (!sink) {
+		osync_trace(TRACE_INTERNAL, "No sink for objtype contact, ebook not initialized");
 		return TRUE;
+	}
 	osync_bool sinkEnabled = osync_objtype_sink_is_enabled(sink);
         osync_trace(TRACE_INTERNAL, "%s: enabled => %d", __func__, sinkEnabled);
-	if (!sinkEnabled)
+	if (!sinkEnabled) {
+		osync_trace(TRACE_INTERNAL, "Sink for objtype contact not enabled, ebook not initialized");
 		return TRUE;
+	}
 	
 	OSyncObjTypeSinkFunctions functions;
 	memset(&functions, 0, sizeof(functions));

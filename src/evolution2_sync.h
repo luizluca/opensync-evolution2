@@ -14,6 +14,16 @@ typedef struct evo2_location {
 	char *uri;
 } evo2_location;
 
+typedef struct OSyncEvoCalendar {
+	const char *uri;
+	const char *objtype;
+	ECalSourceType source_type;
+	icalcomponent_kind ical_component;
+	ECal *calendar;
+	OSyncObjTypeSink *sink;
+	OSyncObjFormat *format;
+} OSyncEvoCalendar;
+
 typedef struct OSyncEvoEnv {
 	char *change_id;
 	
@@ -22,20 +32,7 @@ typedef struct OSyncEvoEnv {
 	OSyncObjTypeSink *contact_sink;
 	OSyncObjFormat *contact_format;
 	
-	const char *calendar_path;
-	ECal *calendar;
-	OSyncObjTypeSink *calendar_sink;
-	OSyncObjFormat *calendar_format;
-	
-	const char *memos_path;
-	ECal *memos;
-	OSyncObjTypeSink *memos_sink;
-	OSyncObjFormat *memos_format;
-	
-	const char *tasks_path;
-	ECal *tasks;
-	OSyncObjTypeSink *tasks_sink;
-	OSyncObjFormat *tasks_format;
+	GList *calendars;
 
 	OSyncPluginInfo *pluginInfo;	
 } OSyncEvoEnv;

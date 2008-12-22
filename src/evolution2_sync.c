@@ -27,23 +27,27 @@
 
 #include "evolution2_sync.h"
 
+void free_osync_evo_calendar(void *data, void* notused)
+{
+	OSyncEvoCalendar *cal = (OSyncEvoCalendar *)data;
+	
+	if (cal->calendar)
+		g_object_unref(cal->calendar);
+	if (cal->sink)
+		osync_objtype_sink_unref(cal->sink);
+	if (cal->format)
+		osync_objformat_unref(cal->format);
+}
+
 static void free_env(OSyncEvoEnv *env)
 {
 	if (env->contact_sink)
 		osync_objtype_sink_unref(env->contact_sink);
 		
-	if (env->calendar_sink)
-		osync_objtype_sink_unref(env->calendar_sink);
-		
-	if (env->memos_sink)
-		osync_objtype_sink_unref(env->memos_sink);
-	
-	if (env->tasks_sink)
-		osync_objtype_sink_unref(env->tasks_sink);
-	
-	if (env->change_id)
-		g_free(env->change_id);
 
+	g_list_foreach(env->calendars, free_osync_evo_calendar, NULL);
+	g_list_free(env->calendars);
+		
 	g_free(env);
 }
 
@@ -210,19 +214,19 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 	env->change_id = g_strdup(osync_plugin_info_get_groupname(info));
 	
 	osync_trace(TRACE_INTERNAL, "The config: %p", osync_plugin_info_get_config(info));
-	
+
 	if (!evo2_ebook_initialize(env, info, error))
 		goto error_free_env;
-
-	if (!evo2_ecal_initialize(env, info, error))
-		goto error_free_env;
-
-	if (!evo2_memo_initialize(env, info, error))
-		goto error_free_env;
 	
-	if (!evo2_etodo_initialize(env, info, error))
+	if (!evo2_ecal_initialize(env, info, "event", "vevent20", error))
 		goto error_free_env;
-	
+
+	if (!evo2_ecal_initialize(env, info, "todo", "vtodo20", error))
+		goto error_free_env;
+
+	if (!evo2_ecal_initialize(env, info, "note", "vjournal", error))
+		goto error_free_env;
+
 	osync_trace(TRACE_EXIT, "%s: %p", __func__, env);
 	return (void *)env;
 
@@ -296,10 +300,13 @@ static osync_bool evo2_discover(void *data, OSyncPluginInfo *info, OSyncError **
 	if (!evo2_ebook_discover(env, capabilities, error)) {
 		goto error_free_capabilties;
 	}
-	if (!evo2_ecal_discover(env, capabilities, error)) {
-		goto error_free_capabilties;
+	int numcalendars = g_list_length(env->calendars);
+	for (i = 0; i < numcalendars; i++) {
+		OSyncEvoCalendar *cal = (OSyncEvoCalendar *)g_list_nth_data(env->calendars, i);
+		if (!cal || !evo2_ecal_discover(cal, capabilities, error)) {
+			goto error_free_capabilties;
+		}
 	}
-
 	osync_plugin_info_set_capabilities(info, capabilities);
 	osync_capabilities_unref(capabilities);
 
