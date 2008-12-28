@@ -21,10 +21,13 @@
 #include <string.h>
 
 #include <opensync/opensync.h>
+#include <opensync/opensync-context.h>
 #include <opensync/opensync-data.h>
 #include <opensync/opensync-format.h>
+#include <opensync/opensync-helper.h>
 #include <opensync/opensync-plugin.h>
 
+#include "evolution2_capabilities.h"
 #include "evolution2_ecal.h"
 
 ECal *evo2_ecal_open_cal(char *path, ECalSourceType source_type, OSyncError **error)
@@ -232,10 +235,9 @@ static void evo2_ecal_get_changes(void *indata, OSyncPluginInfo *info, OSyncCont
         	}
 		for (l = changes; l; l = l->next) {
 			ECalComponent *comp = E_CAL_COMPONENT (l->data);
-			char *data = e_cal_get_component_as_string(evo_cal->calendar, e_cal_component_get_icalcomponent(comp));
-			const char *uid = NULL;
+			data = e_cal_get_component_as_string(evo_cal->calendar, e_cal_component_get_icalcomponent(comp));
 			e_cal_component_get_uid(comp, &uid);
-			int datasize = strlen(data) + 1;
+			datasize = strlen(data) + 1;
 			evo2_ecal_report_change(ctx, evo_cal->format, data, datasize, uid, OSYNC_CHANGE_TYPE_ADDED);
 			g_object_unref (comp);
 		}
@@ -374,7 +376,7 @@ osync_bool evo2_ecal_discover(OSyncEvoCalendar *evo_cal, OSyncCapabilities *caps
         return FALSE;
 }
 
-osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, char *objtype, char *required_format, OSyncError **error)
+osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const char *objtype, const char *required_format, OSyncError **error)
 {
 
 	osync_assert(env);

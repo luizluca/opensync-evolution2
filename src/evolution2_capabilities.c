@@ -92,7 +92,7 @@ static GHashTable* get_ebook_to_xmlformat_hash()
 	return hash;
 }
 
-osync_bool evo2_translate_capabilities(OSyncCapabilities *caps, GHashTable *hash, GList *fields, char *objtype, OSyncError **error)
+osync_bool evo2_translate_capabilities(OSyncCapabilities *caps, GHashTable *hash, GList *fields, const char *objtype, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %s, %p)", __func__, caps, hash, fields, objtype, error);
 	osync_assert(caps);

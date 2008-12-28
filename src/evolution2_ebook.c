@@ -21,9 +21,13 @@
 #include <string.h>
 
 #include <opensync/opensync.h>
+#include <opensync/opensync-context.h>
 #include <opensync/opensync-data.h>
 #include <opensync/opensync-format.h>
+#include <opensync/opensync-helper.h>
 #include <opensync/opensync-plugin.h>
+
+#include "evolution2_capabilities.h"
 
 #include "evolution2_ebook.h"
 
@@ -277,10 +281,11 @@ static void evo2_ebook_get_changes(void *indata, OSyncPluginInfo *info, OSyncCon
 		for (l = changes; l; l = l->next) {
 			EContact *contact = E_CONTACT(l->data);
 			vcard = contact->parent;
-			char *data = e_vcard_to_string(&vcard, EVC_FORMAT_VCARD_30);
-			const char *uid = e_contact_get_const(contact, E_CONTACT_UID);
-			int datasize = strlen(data) + 1;
+			data = e_vcard_to_string(&vcard, EVC_FORMAT_VCARD_30);
+			uid = g_strdup(e_contact_get_const(contact, E_CONTACT_UID));
+			datasize = strlen(data) + 1;
 			evo2_report_change(ctx, env->contact_format, data, datasize, uid, OSYNC_CHANGE_TYPE_ADDED);
+			g_free(uid);
 		}
 		e_book_query_unref(query);
 	}

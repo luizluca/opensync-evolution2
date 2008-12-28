@@ -18,13 +18,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  * 
  */
+#include <string.h>
+
 #include <libedataserver/eds-version.h>
 
 #include <opensync/opensync.h>
+#include <opensync/opensync-format.h>
 #include <opensync/opensync-merger.h>
 #include <opensync/opensync-plugin.h>
 #include <opensync/opensync-version.h>
 
+#include "evolution2_ebook.h"
+#include "evolution2_ecal.h"
 #include "evolution2_sync.h"
 
 void free_osync_evo_calendar(void *data, void* notused)
@@ -267,10 +272,6 @@ static osync_bool evo2_discover(void *data, OSyncPluginInfo *info, OSyncError **
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, error);
 	
-
-	GError* gerror = NULL;
-	GList* fields = NULL;
-
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 	
         int i, numobjs = osync_plugin_info_num_objtypes(info);
