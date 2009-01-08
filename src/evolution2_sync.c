@@ -268,7 +268,7 @@ static char *evo2_determine_version()
 
 /* Here we actually tell opensync which sinks are available and their capabilities */
 
-static osync_bool evo2_discover(void *data, OSyncPluginInfo *info, OSyncError **error)
+static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, error);
 	
