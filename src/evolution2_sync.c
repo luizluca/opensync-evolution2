@@ -231,7 +231,7 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 
 	if (!evo2_ecal_initialize(env, info, "note", "vjournal", error))
 		goto error_free_env;
-
+	
 	osync_trace(TRACE_EXIT, "%s: %p", __func__, env);
 	return (void *)env;
 
@@ -244,15 +244,15 @@ error:
 
 static void evo2_finalize(void *data)
 {
-        osync_trace(TRACE_ENTRY, "%s(%p)", __func__, data);
-	OSyncEvoEnv *env = data;
+	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, data);
+	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 
 	/* cleanup OpenSync stuff */
-        if (env->pluginInfo) {
-                osync_plugin_info_unref(env->pluginInfo);
-                env->pluginInfo = NULL;
-        }
-        osync_trace(TRACE_INTERNAL, "%s - plugin info cleaned", __func__);
+	if (env->pluginInfo) {
+		osync_plugin_info_unref(env->pluginInfo);
+		env->pluginInfo = NULL;
+	}
+	osync_trace(TRACE_INTERNAL, "%s - plugin info cleaned", __func__);
 
 	/* Final cleanup */
 	free_env(env);
@@ -261,7 +261,7 @@ static void evo2_finalize(void *data)
 
 static char *evo2_determine_version()
 {
-        char *version = osync_strdup_printf("%i.%i.%i", eds_major_version, eds_minor_version, eds_micro_version);
+	char *version = osync_strdup_printf("%i.%i.%i", eds_major_version, eds_minor_version, eds_micro_version);
 	return version;
 }
 
@@ -274,13 +274,13 @@ static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **
 	
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 	
-        int i, numobjs = osync_plugin_info_num_objtypes(info);
-        for (i = 0; i < numobjs; i++) {
-                OSyncObjTypeSink *sink = osync_plugin_info_nth_objtype(info, i);
-                g_assert(sink);
+	int i, numobjs = osync_plugin_info_num_objtypes(info);
+	for (i = 0; i < numobjs; i++) {
+		OSyncObjTypeSink *sink = osync_plugin_info_nth_objtype(info, i);
+		osync_assert(sink);
 
-                osync_objtype_sink_set_available(sink, TRUE);
-        }
+		osync_objtype_sink_set_available(sink, TRUE);
+	}
 
 	OSyncVersion *version = osync_version_new(error);
 	osync_version_set_plugin(version, "Evolution");
