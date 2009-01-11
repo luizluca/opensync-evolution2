@@ -19,6 +19,7 @@
  */
  
 #include <string.h>
+#include <glib.h>
 
 #include <opensync/opensync.h>
 #include <opensync/opensync-context.h>
@@ -133,6 +134,8 @@ static void evo2_ecal_sync_done(void *data, OSyncPluginInfo *info, OSyncContext 
 {
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
         OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	OSyncError *error = NULL;
+	GError *gerror = NULL;
 
 	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
 	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
@@ -143,8 +146,15 @@ static void evo2_ecal_sync_done(void *data, OSyncPluginInfo *info, OSyncContext 
 
 
         GList *changes = NULL;
-        e_cal_get_changes(evo_cal->calendar, env->change_id, &changes, NULL);
- 
+        if (!e_cal_get_changes(evo_cal->calendar, env->change_id, &changes, &gerror)) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to update %s ECal time of last sync: %s", evo_cal->objtype, gerror ? gerror->message : "None");
+		g_clear_error(&gerror);
+		osync_context_report_osyncerror(ctx, error);
+		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
+		osync_error_unref(&error);
+	}
+
+	e_cal_free_change_list(changes);
         osync_context_report_success(ctx);
         
         osync_trace(TRACE_EXIT, "%s", __func__);

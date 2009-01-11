@@ -180,6 +180,8 @@ static void evo2_ebook_sync_done(void *data, OSyncPluginInfo *info, OSyncContext
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	OSyncError *error = NULL;
+	GError *gerror=NULL;
 
 	char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
 	osync_anchor_update(anchorpath, "contact", env->addressbook_path);
@@ -187,8 +189,15 @@ static void evo2_ebook_sync_done(void *data, OSyncPluginInfo *info, OSyncContext
 	
 	
 	GList *changes = NULL;
-	e_book_get_changes(env->addressbook, env->change_id, &changes, NULL);
-	
+	if (!e_book_get_changes(env->addressbook, env->change_id, &changes, &gerror)) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to update EBook time of last sync: %s", gerror ? gerror->message : "None");
+		g_clear_error(&gerror);
+		osync_context_report_osyncerror(ctx, error);
+		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
+		osync_error_unref(&error);
+	}
+
+	e_book_free_change_list(changes);
 	osync_context_report_success(ctx);
 	
 	osync_trace(TRACE_EXIT, "%s", __func__);
