@@ -15,6 +15,9 @@ FIND_PACKAGE( GLIB2 REQUIRED )
 INCLUDE( OpenSyncInternal )
 INCLUDE( Testing )
 
+INCLUDE( CheckIncludeFile )
+CHECK_INCLUDE_FILE( "libedataserver/eds-version.h" HAVE_EDS_VERSION_H )
+
 ADD_SUBDIRECTORY( src )
 ADD_SUBDIRECTORY( tools )
 ADD_SUBDIRECTORY( tests )

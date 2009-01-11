@@ -20,7 +20,9 @@
  */
 #include <string.h>
 
+#ifdef HAVE_EDS_VERSION_H
 #include <libedataserver/eds-version.h>
+#endif /* HAVE_EDS_VERSION_H */
 
 #include <opensync/opensync.h>
 #include <opensync/opensync-format.h>
@@ -136,8 +138,13 @@ static void evo2_finalize(void *data)
 
 static char *evo2_determine_version()
 {
-	char *version = osync_strdup_printf("%i.%i.%i", eds_major_version, eds_minor_version, eds_micro_version);
-	return version;
+	char *version = NULL;
+#ifdef HAVE_EDS_VERSION
+	version = osync_strdup_printf("%i.%i.%i", eds_major_version, eds_minor_version, eds_micro_version);
+#else
+	version = osync_strdup("Unknown");
+#endif /* HAVE_EDS_VERSION */
+return version;
 }
 
 
