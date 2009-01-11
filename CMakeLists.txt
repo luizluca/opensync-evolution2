@@ -16,6 +16,7 @@ INCLUDE( OpenSyncInternal )
 INCLUDE( Testing )
 
 ADD_SUBDIRECTORY( src )
+ADD_SUBDIRECTORY( tools )
 ADD_SUBDIRECTORY( tests )
 
 
