@@ -90,22 +90,33 @@ static void evo2_ecal_connect(void *data, OSyncPluginInfo *info, OSyncContext *c
         OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
 	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
 
-        OSyncEvoEnv *env = (OSyncEvoEnv *)data;
-
 	if (!(evo_cal->calendar = evo2_ecal_open_cal(osync_strdup(evo_cal->uri), evo_cal->source_type, &error))) {
 		goto error;
 	}
 
-        char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
-        if (!osync_anchor_compare(anchorpath, evo_cal->objtype, evo_cal->uri))
-                osync_objtype_sink_set_slowsync(sink, TRUE);
-        g_free(anchorpath);
+	OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
+	osync_bool anchor_match;
+	if (!anchor) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		goto error_free_cal;
+	}
+	if (!osync_anchor_compare(anchor, evo_cal->uri, &anchor_match, &error)) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor comparison failed for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		goto error_free_cal;
+	}
+	if (!anchor_match) {
+		osync_trace(TRACE_INTERNAL, "ECal slow sync, due to anchor mismatch for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		osync_objtype_sink_set_slowsync(sink, TRUE);
+	}
 
         osync_context_report_success(ctx);
 
         osync_trace(TRACE_EXIT, "%s", __func__);
         return;
 
+ error_free_cal:
+	g_object_unref(evo_cal->calendar);
+	evo_cal->calendar = NULL;
 error:
 	osync_context_report_osyncerror(ctx, error);
         osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
@@ -115,7 +126,6 @@ error:
 static void evo2_ecal_disconnect(void *data, OSyncPluginInfo *info, OSyncContext *ctx)
 {
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
-        OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 
 	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
 	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
@@ -140,24 +150,31 @@ static void evo2_ecal_sync_done(void *data, OSyncPluginInfo *info, OSyncContext 
 	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
 	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)osync_objtype_sink_get_userdata(sink);
 
-        char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
-        osync_anchor_update(anchorpath, evo_cal->objtype, evo_cal->uri);
-        g_free(anchorpath);
-
+	OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
+	if (!anchor) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		goto error;
+	}
+	if (!osync_anchor_update(anchor, evo_cal->uri, &error))
+		goto error;
 
         GList *changes = NULL;
         if (!e_cal_get_changes(evo_cal->calendar, env->change_id, &changes, &gerror)) {
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to update %s ECal time of last sync: %s", evo_cal->objtype, gerror ? gerror->message : "None");
 		g_clear_error(&gerror);
-		osync_context_report_osyncerror(ctx, error);
-		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
-		osync_error_unref(&error);
+		goto error;
 	}
 
 	e_cal_free_change_list(changes);
         osync_context_report_success(ctx);
         
         osync_trace(TRACE_EXIT, "%s", __func__);
+	return;
+
+ error:
+	osync_context_report_osyncerror(ctx, error);
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
+	osync_error_unref(&error);
 }
 
 void evo2_ecal_report_change(OSyncContext *ctx, OSyncObjFormat *format, char *data, unsigned int size, const char *uid, OSyncChangeType changetype)
@@ -269,7 +286,6 @@ error:
 static void evo2_ecal_modify(void *data, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *change)
 {
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, data, info, ctx, change);
-        OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 
         const char *uid = osync_change_get_uid(change);
 	icalcomponent *icomp = NULL;
@@ -409,6 +425,8 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const c
         functions.get_changes = evo2_ecal_get_changes;
         functions.commit = evo2_ecal_modify;
         functions.sync_done = evo2_ecal_sync_done;
+
+	osync_objtype_sink_enable_anchor(sink, TRUE);
 
 	OSyncEvoCalendar *cal = osync_try_malloc0(sizeof(OSyncEvoCalendar), error);
 	if (!cal) {

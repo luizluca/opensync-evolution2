@@ -139,23 +139,36 @@ static void evo2_ebook_connect(void *data, OSyncPluginInfo *info, OSyncContext *
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
 	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	osync_bool anchor_match;
 
 	if (!(env->addressbook = evo2_ebook_open_book(osync_strdup(env->addressbook_path), &error))) {
 		goto error;
 	}
 	
-	char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
-	if (!osync_anchor_compare(anchorpath, "contact", env->addressbook_path))
+	OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
+	if (!anchor) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		goto error_free_book;
+	}
+	if (!osync_anchor_compare(anchor, env->addressbook_path, &anchor_match, &error)) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor comparison failed for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		goto error_free_book;
+	}
+	if (!anchor_match) {
+		osync_trace(TRACE_INTERNAL, "EBook slow sync, due to anchor mismatch");
 		osync_objtype_sink_set_slowsync(sink, TRUE);
-	g_free(anchorpath);
+	}
 
 	
 	osync_context_report_success(ctx);
 	
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return;
-	
-error:
+
+ error_free_book:
+	g_object_unref(env->addressbook);
+	env->addressbook = NULL;
+ error:
 	osync_context_report_osyncerror(ctx, error);
 	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
 	osync_error_unref(&error);
@@ -183,24 +196,33 @@ static void evo2_ebook_sync_done(void *data, OSyncPluginInfo *info, OSyncContext
 	OSyncError *error = NULL;
 	GError *gerror=NULL;
 
-	char *anchorpath = g_strdup_printf("%s/anchor.db", osync_plugin_info_get_configdir(info));
-	osync_anchor_update(anchorpath, "contact", env->addressbook_path);
-	g_free(anchorpath);
-	
+	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
+	OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
+	if (!anchor) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+		goto error;
+	}
+	if (!osync_anchor_update(anchor, env->addressbook_path, &error))
+		goto error;
 	
 	GList *changes = NULL;
 	if (!e_book_get_changes(env->addressbook, env->change_id, &changes, &gerror)) {
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Unable to update EBook time of last sync: %s", gerror ? gerror->message : "None");
 		g_clear_error(&gerror);
-		osync_context_report_osyncerror(ctx, error);
-		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
-		osync_error_unref(&error);
+		goto error;
 	}
 
 	e_book_free_change_list(changes);
 	osync_context_report_success(ctx);
 	
 	osync_trace(TRACE_EXIT, "%s", __func__);
+	return;
+
+ error:
+	osync_context_report_osyncerror(ctx, error);
+	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
+	osync_error_unref(&error);
+	
 }
 
 void evo2_report_change(OSyncContext *ctx, OSyncObjFormat *format, char *data, unsigned int size, const char *uid, OSyncChangeType changetype)
@@ -410,6 +432,8 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 	functions.get_changes = evo2_ebook_get_changes;
 	functions.commit = evo2_ebook_modify;
 	functions.sync_done = evo2_ebook_sync_done;
+
+	osync_objtype_sink_enable_anchor(sink, TRUE);
 
 	OSyncPluginConfig *config = osync_plugin_info_get_config(info);
 	OSyncPluginResource *resource = osync_plugin_config_find_active_resource(config, "contact");
