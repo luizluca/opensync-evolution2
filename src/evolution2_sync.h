@@ -17,6 +17,7 @@ typedef struct evo2_location {
 typedef struct OSyncEvoCalendar {
 	const char *uri;
 	const char *objtype;
+	const char *change_id;
 	ECalSourceType source_type;
 	icalcomponent_kind ical_component;
 	ECal *calendar;

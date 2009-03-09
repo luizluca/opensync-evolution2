@@ -132,12 +132,12 @@ osync_bool evo2_ebook_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncE
 
 }
 
-static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *data)
+static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
 	OSyncError *error = NULL;
 	
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, sink, info, ctx, data);
-	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, sink, info, ctx, userdata);
+	OSyncEvoEnv *env = (OSyncEvoEnv *)userdata;
 	osync_bool anchor_match;
 
 	if (!(env->addressbook = evo2_ebook_open_book(osync_strdup(env->addressbook_path), &error))) {
@@ -173,10 +173,10 @@ static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 	osync_error_unref(&error);
 }
 
-static void evo2_ebook_disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *data)
+static void evo2_ebook_disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, ctx);
-	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, userdata, info, ctx);
+	OSyncEvoEnv *env = (OSyncEvoEnv *)userdata;
 	
 	if (env->addressbook) {
 		g_object_unref(env->addressbook);
@@ -188,10 +188,10 @@ static void evo2_ebook_disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
 	osync_trace(TRACE_EXIT, "%s", __func__);
 }
 
-static void evo2_ebook_sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *data)
+static void evo2_ebook_sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, sink, info, ctx, data);
-	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, sink, info, ctx, userdata);
+	OSyncEvoEnv *env = (OSyncEvoEnv *)userdata;
 	OSyncError *error = NULL;
 	GError *gerror=NULL;
 
@@ -331,10 +331,10 @@ error:
 	osync_error_unref(&error);
 }
 
-static void evo2_ebook_modify(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *change, void *data)
+static void evo2_ebook_modify(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *change, void *userdata)
 {
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p, %p)", __func__, sink, info, ctx, change, data);
-	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p, %p)", __func__, sink, info, ctx, change, userdata);
+	OSyncEvoEnv *env = (OSyncEvoEnv *)userdata;
 	
 	const char *uid = osync_change_get_uid(change);
 	EContact *contact = NULL;
@@ -457,7 +457,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 
 	env->contact_sink = osync_objtype_sink_ref(sink);
 
-	osync_objtype_sink_set_functions(sink, functions, NULL);
+	osync_objtype_sink_set_functions(sink, functions, env);
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return TRUE;
 
