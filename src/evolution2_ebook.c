@@ -21,7 +21,6 @@
 #include <string.h>
 
 #include <opensync/opensync.h>
-#include <opensync/opensync-context.h>
 #include <opensync/opensync-data.h>
 #include <opensync/opensync-format.h>
 #include <opensync/opensync-helper.h>

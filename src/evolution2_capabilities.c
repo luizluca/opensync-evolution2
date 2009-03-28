@@ -19,7 +19,7 @@
  */
 
 #include <opensync/opensync.h>
-#include <opensync/opensync-merger.h>
+#include <opensync/opensync-capabilities.h>
 
 #include <glib.h>
 

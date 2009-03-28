@@ -2,7 +2,7 @@
 #define ECAL_H
 
 #include <opensync/opensync.h>
-#include <opensync/opensync-merger.h>
+#include <opensync/opensync-capabilities.h>
 
 #include "evolution2_sync.h"
 

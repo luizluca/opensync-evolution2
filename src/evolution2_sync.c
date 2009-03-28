@@ -26,7 +26,7 @@
 
 #include <opensync/opensync.h>
 #include <opensync/opensync-format.h>
-#include <opensync/opensync-merger.h>
+#include <opensync/opensync-capabilities.h>
 #include <opensync/opensync-plugin.h>
 #include <opensync/opensync-version.h>
 
