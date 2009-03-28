@@ -156,9 +156,10 @@ static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **
 	
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
 	
-	int i, numobjs = osync_plugin_info_num_objtypes(info);
-	for (i = 0; i < numobjs; i++) {
-		OSyncObjTypeSink *sink = osync_plugin_info_nth_objtype(info, i);
+	OSyncList *l, *list = NULL;
+	list = osync_plugin_info_get_objtype_sinks(info);
+	for (l=list; l; l = l->next) {
+		OSyncObjTypeSink *sink = (OSyncObjTypeSink *) l->data;
 		osync_assert(sink);
 
 		osync_objtype_sink_set_available(sink, TRUE);
@@ -183,7 +184,7 @@ static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **
 	if (!evo2_ebook_discover(env, capabilities, error)) {
 		goto error_free_capabilties;
 	}
-	int numcalendars = g_list_length(env->calendars);
+	int i, numcalendars = g_list_length(env->calendars);
 	for (i = 0; i < numcalendars; i++) {
 		OSyncEvoCalendar *cal = (OSyncEvoCalendar *)g_list_nth_data(env->calendars, i);
 		if (!cal || !evo2_ecal_discover(cal, capabilities, error)) {
