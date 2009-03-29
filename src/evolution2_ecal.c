@@ -411,13 +411,11 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const c
         if (!sinkEnabled)
                 return TRUE;
 
-        OSyncObjTypeSinkFunctions functions;
-        memset(&functions, 0, sizeof(functions));
-        functions.connect = evo2_ecal_connect;
-        functions.disconnect = evo2_ecal_disconnect;
-        functions.get_changes = evo2_ecal_get_changes;
-        functions.commit = evo2_ecal_modify;
-        functions.sync_done = evo2_ecal_sync_done;
+        osync_objtype_sink_set_connect_func(sink, evo2_ecal_connect);
+        osync_objtype_sink_set_disconnect_func(sink, evo2_ecal_disconnect);
+        osync_objtype_sink_set_get_changes_func(sink, evo2_ecal_get_changes);
+        osync_objtype_sink_set_commit_func(sink, evo2_ecal_modify);
+        osync_objtype_sink_set_sync_done_func(sink, evo2_ecal_sync_done);
 
 	osync_objtype_sink_enable_anchor(sink, TRUE);
 
@@ -467,7 +465,7 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const c
 
         cal->sink = osync_objtype_sink_ref(sink);
 
-        osync_objtype_sink_set_functions(cal->sink, functions, cal);
+        osync_objtype_sink_set_userdata(cal->sink, cal);
 
 	env->calendars = g_list_append(env->calendars, cal);
 	return TRUE;

@@ -421,13 +421,11 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 		return TRUE;
 	}
 	
-	OSyncObjTypeSinkFunctions functions;
-	memset(&functions, 0, sizeof(functions));
-	functions.connect = evo2_ebook_connect;
-	functions.disconnect = evo2_ebook_disconnect;
-	functions.get_changes = evo2_ebook_get_changes;
-	functions.commit = evo2_ebook_modify;
-	functions.sync_done = evo2_ebook_sync_done;
+	osync_objtype_sink_set_connect_func(sink, evo2_ebook_connect);
+	osync_objtype_sink_set_disconnect_func(sink, evo2_ebook_disconnect);
+	osync_objtype_sink_set_get_changes_func(sink, evo2_ebook_get_changes);
+	osync_objtype_sink_set_commit_func(sink, evo2_ebook_modify);
+	osync_objtype_sink_set_sync_done_func(sink, evo2_ebook_sync_done);
 
 	osync_objtype_sink_enable_anchor(sink, TRUE);
 
@@ -456,7 +454,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 
 	env->contact_sink = osync_objtype_sink_ref(sink);
 
-	osync_objtype_sink_set_functions(sink, functions, env);
+	osync_objtype_sink_set_userdata(sink, env);
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return TRUE;
 
