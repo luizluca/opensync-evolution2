@@ -148,7 +148,7 @@ static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_book;
 	}
-	if (!osync_anchor_compare(anchor, env->addressbook_path, &anchor_match, &error)) {
+	if (!osync_anchor_compare(anchor, "path", env->addressbook_path, &anchor_match, &error)) {
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor comparison failed for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_book;
 	}
@@ -199,7 +199,7 @@ static void evo2_ebook_sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, 
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error;
 	}
-	if (!osync_anchor_update(anchor, env->addressbook_path, &error))
+	if (!osync_anchor_update(anchor, "path", env->addressbook_path, &error))
 		goto error;
 	
 	GList *changes = NULL;

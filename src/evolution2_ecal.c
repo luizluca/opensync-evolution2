@@ -98,7 +98,7 @@ static void evo2_ecal_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSy
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_cal;
 	}
-	if (!osync_anchor_compare(anchor, evo_cal->uri, &anchor_match, &error)) {
+	if (!osync_anchor_compare(anchor, "uri", evo_cal->uri, &anchor_match, &error)) {
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor comparison failed for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_cal;
 	}
@@ -151,7 +151,7 @@ static void evo2_ecal_sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, O
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error;
 	}
-	if (!osync_anchor_update(anchor, evo_cal->uri, &error))
+	if (!osync_anchor_update(anchor, "uri", evo_cal->uri, &error))
 		goto error;
 
         GList *changes = NULL;
