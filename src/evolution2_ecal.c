@@ -104,7 +104,7 @@ static void evo2_ecal_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSy
 	}
 	if (!anchor_match) {
 		osync_trace(TRACE_INTERNAL, "ECal slow sync, due to anchor mismatch for objtype \"%s\"", osync_objtype_sink_get_name(sink));
-		osync_objtype_sink_set_slowsync(sink, TRUE);
+		osync_context_report_slowsync(ctx);
 	}
 
         osync_context_report_success(ctx);

@@ -154,7 +154,7 @@ static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 	}
 	if (!anchor_match) {
 		osync_trace(TRACE_INTERNAL, "EBook slow sync, due to anchor mismatch");
-		osync_objtype_sink_set_slowsync(sink, TRUE);
+		osync_context_report_slowsync(ctx);
 	}
 
 	
