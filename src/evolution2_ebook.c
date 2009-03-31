@@ -137,22 +137,22 @@ static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 	
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, sink, info, ctx, userdata);
 	OSyncEvoEnv *env = (OSyncEvoEnv *)userdata;
-	osync_bool anchor_match;
+	osync_bool state_match;
 
 	if (!(env->addressbook = evo2_ebook_open_book(osync_strdup(env->addressbook_path), &error))) {
 		goto error;
 	}
 	
-	OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
-	if (!anchor) {
-		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+	OSyncSinkStateDB *state_db = osync_objtype_sink_get_state_db(sink);
+	if (!state_db) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "State database missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_book;
 	}
-	if (!osync_anchor_compare(anchor, "path", env->addressbook_path, &anchor_match, &error)) {
+	if (!osync_sink_state_equal(state_db, "path", env->addressbook_path, &state_match, &error)) {
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor comparison failed for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_book;
 	}
-	if (!anchor_match) {
+	if (!state_match) {
 		osync_trace(TRACE_INTERNAL, "EBook slow sync, due to anchor mismatch");
 		osync_context_report_slowsync(ctx);
 	}
@@ -194,12 +194,12 @@ static void evo2_ebook_sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, 
 	OSyncError *error = NULL;
 	GError *gerror=NULL;
 
-	OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
-	if (!anchor) {
-		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
+	OSyncSinkStateDB *state_db = osync_objtype_sink_get_state_db(sink);
+	if (!state_db) {
+		osync_error_set(&error, OSYNC_ERROR_GENERIC, "State database missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error;
 	}
-	if (!osync_anchor_update(anchor, "path", env->addressbook_path, &error))
+	if (!osync_sink_state_set(state_db, "path", env->addressbook_path, &error))
 		goto error;
 	
 	GList *changes = NULL;
@@ -427,7 +427,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 	osync_objtype_sink_set_commit_func(sink, evo2_ebook_modify);
 	osync_objtype_sink_set_sync_done_func(sink, evo2_ebook_sync_done);
 
-	osync_objtype_sink_enable_anchor(sink, TRUE);
+	osync_objtype_sink_enable_state_db(sink, TRUE);
 
 	OSyncPluginConfig *config = osync_plugin_info_get_config(info);
 	OSyncPluginResource *resource = osync_plugin_config_find_active_resource(config, "contact");
