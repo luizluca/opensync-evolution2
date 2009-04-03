@@ -97,6 +97,9 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 	
 	osync_trace(TRACE_INTERNAL, "The config: %p", osync_plugin_info_get_config(info));
 
+
+	g_type_init();
+
 	if (!evo2_ebook_initialize(env, info, error))
 		goto error_free_env;
 	
