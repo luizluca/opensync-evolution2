@@ -1,3 +1,5 @@
+// see note in ../src/evolution2_sync.h
+#define HANDLE_LIBICAL_MEMORY 1
 #include <glib.h>
 #include <libecal/e-cal.h>
 #include <libebook/e-book.h>
