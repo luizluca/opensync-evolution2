@@ -98,7 +98,7 @@ static void evo2_ecal_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSy
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_cal;
 	}
-	if (!osync_sink_state_equal(state_db, "uri", evo_cal->uri, &state_match, &error)) {
+	if (!osync_sink_state_equal(state_db, evo_cal->uri_key, evo_cal->uri, &state_match, &error)) {
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "Anchor comparison failed for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error_free_cal;
 	}
@@ -151,7 +151,7 @@ static void evo2_ecal_sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, O
 		osync_error_set(&error, OSYNC_ERROR_GENERIC, "State database missing for objtype \"%s\"", osync_objtype_sink_get_name(sink));
 		goto error;
 	}
-	if (!osync_sink_state_set(state_db, "uri", evo_cal->uri, &error))
+	if (!osync_sink_state_set(state_db, evo_cal->uri_key, evo_cal->uri, &error))
 		goto error;
 
         GList *changes = NULL;
@@ -397,6 +397,7 @@ osync_bool evo2_ecal_discover(OSyncEvoCalendar *evo_cal, OSyncCapabilities *caps
 
 osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const char *objtype, const char *required_format, OSyncError **error)
 {
+	char *uri_key;
 
 	osync_assert(env);
 	osync_assert(info);
@@ -428,6 +429,14 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const c
 
 	OSyncPluginConfig *config = osync_plugin_info_get_config(info);
         OSyncPluginResource *resource = osync_plugin_config_find_active_resource(config, objtype);
+
+		const int size = strlen(STR_URI_KEY) + strlen(objtype) + 1;
+
+		uri_key = malloc(size * sizeof(char));
+
+		snprintf(uri_key, size, "%s%s", STR_URI_KEY, objtype);
+
+		cal->uri_key = uri_key;
         cal->uri = osync_plugin_resource_get_url(resource);
         if(!cal->uri) {
                 osync_error_set(error,OSYNC_ERROR_GENERIC, "%s url not set", objtype);

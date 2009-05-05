@@ -40,12 +40,16 @@
 #define e_cal_component_get_recurid_as_string() See_evolution2_sync_h_for_note
 
 
+#define STR_URI_KEY		"uri_"
+
+
 typedef struct evo2_location {
 	char *name;
 	char *uri;
 } evo2_location;
 
 typedef struct OSyncEvoCalendar {
+	const char *uri_key;
 	const char *uri;
 	const char *objtype;
 	const char *change_id;
