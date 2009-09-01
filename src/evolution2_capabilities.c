@@ -100,8 +100,11 @@ osync_bool evo2_translate_capabilities(OSyncCapabilities *caps, GHashTable *hash
 	osync_assert(fields);
 	osync_assert(objtype);
 
+	OSyncCapabilitiesObjType *capsobjtype = osync_capabilities_objtype_new(caps, objtype, error);
+
 	for(; fields; fields = g_list_next(fields)) {
 
+#if 0
 		const char *value = g_hash_table_lookup(hash, fields->data);
 		if (value == NULL) {
 			osync_trace(TRACE_INTERNAL, "%s: ebook capability '%s' could not be translated", __func__, fields->data);
@@ -113,6 +116,12 @@ osync_bool evo2_translate_capabilities(OSyncCapabilities *caps, GHashTable *hash
 				goto error;
 			}
 		}
+#endif
+		OSyncCapability *cap = osync_capability_new(capsobjtype, error);
+		if (!cap)
+			goto error;
+
+		osync_capability_set_name(cap, (const char *) fields->data);
 	}
 
 	osync_trace(TRACE_EXIT, "%s", __func__);

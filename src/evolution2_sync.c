@@ -183,7 +183,7 @@ static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **
 	osync_version_unref(version);
 
 	OSyncCapabilities *capabilities;
-	capabilities = osync_capabilities_new(error);
+	capabilities = osync_capabilities_new("evo2-caps", error);
 	if (!evo2_ebook_discover(env, capabilities, error)) {
 		goto error_free_capabilties;
 	}
