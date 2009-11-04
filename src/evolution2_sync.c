@@ -24,6 +24,8 @@
 #include <libedataserver/eds-version.h>
 #endif /* HAVE_EDS_VERSION_H */
 
+#include <gmodule.h>
+
 #include <opensync/opensync.h>
 #include <opensync/opensync-format.h>
 #include <opensync/opensync-capabilities.h>
@@ -220,6 +222,7 @@ osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 	osync_plugin_set_initialize(plugin, evo2_initialize);
 	osync_plugin_set_finalize(plugin, evo2_finalize);
 	osync_plugin_set_discover(plugin, evo2_discover);
+	osync_plugin_set_start_type(plugin, OSYNC_START_TYPE_PROCESS);
 	
 	if (!osync_plugin_env_register_plugin(env, plugin, error))
 			goto error;
@@ -250,4 +253,10 @@ int get_version(void)
 int dont_free(void)
 {
 	return 1;
+}
+
+const char * g_module_check_init (GModule *module)
+{
+	g_module_make_resident (module);
+	return NULL;
 }
