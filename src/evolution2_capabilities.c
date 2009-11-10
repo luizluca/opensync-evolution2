@@ -27,7 +27,7 @@
 
 osync_bool evo2_translate_capabilities(OSyncCapabilities *caps, GList *fields, const char *objtype, OSyncError **error)
 {
-	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %s, %p)", __func__, caps, fields, objtype, error);
+	osync_trace(TRACE_ENTRY, "%s(%p, %p, %s, %p)", __func__, caps, fields, objtype, error);
 	osync_assert(caps);
 	osync_assert(fields);
 	osync_assert(objtype);
