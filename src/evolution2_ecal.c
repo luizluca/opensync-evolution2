@@ -250,7 +250,7 @@ static void evo2_ecal_get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
                 }
         } else {
                 osync_trace(TRACE_INTERNAL, "slow_sync for %s", evo_cal->objtype);
-	        if (!e_cal_get_object_list_as_comp (evo_cal->calendar, "(contains? \"any\" \"\")", &changes, &gerror)) {
+	        if (!e_cal_get_object_list_as_comp (evo_cal->calendar, "(has-start?)", &changes, &gerror)) {
                         osync_error_set(&error, OSYNC_ERROR_GENERIC, "Failed to get %s changes: %s",  evo_cal->objtype, gerror ? gerror->message : "None");
                         goto error;
         	}
