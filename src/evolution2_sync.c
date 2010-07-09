@@ -40,23 +40,29 @@ void free_osync_evo_calendar(void *data, void* notused)
 {
 	OSyncEvoCalendar *cal = (OSyncEvoCalendar *)data;
 	
-	if (cal->calendar)
+	if (cal->calendar) {
 		g_object_unref(cal->calendar);
-	if (cal->sink)
+		cal->calendar = NULL;
+	}
+	if (cal->sink) {
 		osync_objtype_sink_unref(cal->sink);
-	if (cal->format)
+		cal->sink = NULL;
+	}
+	if (cal->format) {
 		osync_objformat_unref(cal->format);
+		cal->format = NULL;
+	}
 }
 
 static void free_env(OSyncEvoEnv *env)
 {
 	if (env->contact_sink)
 		osync_objtype_sink_unref(env->contact_sink);
-		
+
 
 	g_list_foreach(env->calendars, free_osync_evo_calendar, NULL);
 	g_list_free(env->calendars);
-		
+
 	g_free(env);
 }
 
