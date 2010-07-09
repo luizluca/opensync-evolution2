@@ -169,6 +169,7 @@ static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **
 
 		osync_objtype_sink_set_available(sink, TRUE);
 	}
+	osync_list_free(list);
 
 	OSyncVersion *version = osync_version_new(error);
 	osync_version_set_plugin(version, "Evolution");

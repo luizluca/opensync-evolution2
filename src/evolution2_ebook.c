@@ -443,6 +443,7 @@ osync_bool evo2_ebook_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, OSyncE
 		OSyncObjFormatSink *objformatsink = r->data;
 		if(!strcmp("vcard30", osync_objformat_sink_get_objformat(objformatsink))) { hasObjFormat = TRUE; break;}
 	}
+	osync_list_free(objformatsinks);
         if (!hasObjFormat) {
 		osync_error_set(error, OSYNC_ERROR_GENERIC, "Format vcard30 not set.");
 		goto error;

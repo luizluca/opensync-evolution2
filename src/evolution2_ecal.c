@@ -449,6 +449,7 @@ osync_bool evo2_ecal_initialize(OSyncEvoEnv *env, OSyncPluginInfo *info, const c
                 OSyncObjFormatSink *objformatsink = r->data;
                 if(!strcmp(required_format, osync_objformat_sink_get_objformat(objformatsink))) { hasObjFormat = TRUE; break;}
         }
+	osync_list_free(objformatsinks);
         if (!hasObjFormat) {
                 osync_error_set(error, OSYNC_ERROR_GENERIC, "Format %s not set.", required_format);
                 return FALSE;
