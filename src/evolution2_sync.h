@@ -44,7 +44,7 @@
 
 
 typedef struct OSyncEvoCalendar {
-	const char *uri_key;
+	char *uri_key;
 	const char *uri;
 	const char *objtype;
 	const char *change_id;

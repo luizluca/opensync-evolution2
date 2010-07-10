@@ -40,6 +40,10 @@ void free_osync_evo_calendar(void *data, void* notused)
 {
 	OSyncEvoCalendar *cal = (OSyncEvoCalendar *)data;
 	
+	if (cal->uri_key) {
+		free(cal->uri_key);
+		cal->uri_key = NULL;
+	}
 	if (cal->calendar) {
 		g_object_unref(cal->calendar);
 		cal->calendar = NULL;
@@ -52,6 +56,8 @@ void free_osync_evo_calendar(void *data, void* notused)
 		osync_objformat_unref(cal->format);
 		cal->format = NULL;
 	}
+
+	osync_free(cal);
 }
 
 static void free_env(OSyncEvoEnv *env)
@@ -79,9 +85,19 @@ ESource *evo2_find_source(ESourceList *list, const char *uri)
 		GSList *s;
 		for (s = e_source_group_peek_sources (group); s; s = s->next) {
 			ESource *source = E_SOURCE (s->data);
-			osync_trace(TRACE_INTERNAL, "Comparing source uri %s and %s", e_source_get_uri(source), uri);
-			if (!strcmp(e_source_get_uri(source), uri))
+
+			// e_source_get_uri() returns an allocated string
+			// that we need to free
+			char *source_uri = e_source_get_uri(source);
+			osync_trace(TRACE_INTERNAL, "Comparing source uri %s and %s", source_uri, uri);
+			int cmp = strcmp(source_uri, uri);
+			g_free(source_uri);
+			if (!cmp)
 				return source;
+
+			// e_source_peek_name() does not seem to require
+			// freeing... *sigh* had to read the source code to
+			// find this out
 			osync_trace(TRACE_INTERNAL, "Comparing source name %s and %s", e_source_peek_name(source), uri);
 			if (!strcmp(e_source_peek_name(source), uri))
 				return source;
