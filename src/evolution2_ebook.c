@@ -30,7 +30,7 @@
 
 #include "evolution2_ebook.h"
 
-EBook *evo2_ebook_open_book(char *path, OSyncError **error) 
+EBook *evo2_ebook_open_book(const char *path, OSyncError **error) 
 {
 	EBook *addressbook = NULL;
 	GError *gerror = NULL;
@@ -98,7 +98,7 @@ osync_bool evo2_ebook_discover(OSyncEvoEnv *env, OSyncCapabilities *caps, OSyncE
 	osync_assert(caps);
 
 	if (env->contact_sink) {
-		if (!(book = evo2_ebook_open_book(g_strdup(env->addressbook_path), error))) {
+		if (!(book = evo2_ebook_open_book(env->addressbook_path, error))) {
 			goto error;
 		}
 		writable = e_book_is_writable(book);
@@ -139,7 +139,7 @@ static void evo2_ebook_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 	OSyncEvoEnv *env = (OSyncEvoEnv *)userdata;
 	osync_bool state_match;
 
-	if (!(env->addressbook = evo2_ebook_open_book(osync_strdup(env->addressbook_path), &error))) {
+	if (!(env->addressbook = evo2_ebook_open_book(env->addressbook_path, &error))) {
 		goto error;
 	}
 	

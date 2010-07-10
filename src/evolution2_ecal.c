@@ -30,7 +30,7 @@
 #include "evolution2_capabilities.h"
 #include "evolution2_ecal.h"
 
-ECal *evo2_ecal_open_cal(char *path, ECalSourceType source_type, OSyncError **error)
+ECal *evo2_ecal_open_cal(const char *path, ECalSourceType source_type, OSyncError **error)
 {
 	ECal *calendar = NULL;
 	GError *gerror = NULL;
@@ -88,7 +88,7 @@ static void evo2_ecal_connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSy
         osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __func__, sink, info, ctx, userdata);
  	OSyncEvoCalendar * evo_cal = (OSyncEvoCalendar *)userdata;
 
-	if (!(evo_cal->calendar = evo2_ecal_open_cal(osync_strdup(evo_cal->uri), evo_cal->source_type, &error))) {
+	if (!(evo_cal->calendar = evo2_ecal_open_cal(evo_cal->uri, evo_cal->source_type, &error))) {
 		goto error;
 	}
 
@@ -370,7 +370,7 @@ osync_bool evo2_ecal_discover(OSyncEvoCalendar *evo_cal, OSyncCapabilities *caps
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, evo_cal, caps, error);
 
 	if (evo_cal->sink) {
-		if (!(cal = evo2_ecal_open_cal(osync_strdup(evo_cal->uri), evo_cal->source_type, error))) {
+		if (!(cal = evo2_ecal_open_cal(evo_cal->uri, evo_cal->source_type, error))) {
 			goto error;
 		}
 		if (!e_cal_is_read_only(cal, &read_only, &gerror)) {

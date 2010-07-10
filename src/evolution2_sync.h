@@ -43,11 +43,6 @@
 #define STR_URI_KEY		"uri_"
 
 
-typedef struct evo2_location {
-	char *name;
-	char *uri;
-} evo2_location;
-
 typedef struct OSyncEvoCalendar {
 	const char *uri_key;
 	const char *uri;
@@ -73,6 +68,6 @@ typedef struct OSyncEvoEnv {
 	OSyncPluginInfo *pluginInfo;	
 } OSyncEvoEnv;
 
-ESource *evo2_find_source(ESourceList *list, char *uri);
+ESource *evo2_find_source(ESourceList *list, const char *uri);
 
 #endif

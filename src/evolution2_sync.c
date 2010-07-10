@@ -58,7 +58,10 @@ static void free_env(OSyncEvoEnv *env)
 {
 	if (env->contact_sink)
 		osync_objtype_sink_unref(env->contact_sink);
-
+	if (env->pluginInfo)
+		osync_plugin_info_unref(env->pluginInfo);
+	if (env->change_id)
+		g_free(env->change_id);
 
 	g_list_foreach(env->calendars, free_osync_evo_calendar, NULL);
 	g_list_free(env->calendars);
@@ -68,7 +71,7 @@ static void free_env(OSyncEvoEnv *env)
 
 
 
-ESource *evo2_find_source(ESourceList *list, char *uri)
+ESource *evo2_find_source(ESourceList *list, const char *uri)
 {
 	GSList *g;
 	for (g = e_source_list_peek_groups (list); g; g = g->next) {
@@ -100,9 +103,9 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 	env->pluginInfo = osync_plugin_info_ref(info);
 		
 	osync_trace(TRACE_INTERNAL, "Setting change id: %s", osync_plugin_info_get_groupname(info));
-	
+
 	env->change_id = g_strdup(osync_plugin_info_get_groupname(info));
-	
+
 	osync_trace(TRACE_INTERNAL, "The config: %p", osync_plugin_info_get_config(info));
 
 
