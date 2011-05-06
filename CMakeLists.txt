@@ -3,8 +3,6 @@ PROJECT( libopensync-plugin-evolution2 C )
 
 SET( VERSION "0.40" )
 
-SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules" )
-
 SET( OPENSYNC_MIN_VERSION "0.40" )
 
 FIND_PACKAGE( EPackage REQUIRED )
