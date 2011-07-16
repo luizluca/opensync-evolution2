@@ -152,6 +152,7 @@ osync_bool get_conversion_info(OSyncFormatEnv *env)
 		goto error;
 
 	osync_format_env_register_caps_converter(env, caps_converter, &error);
+	osync_caps_converter_unref(caps_converter);
 
 	return TRUE;
 
