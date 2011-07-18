@@ -98,7 +98,7 @@ osync_bool caps_conv_generic(OSyncCapabilities *oldcaps, OSyncCapabilities *newc
 	OSyncCapabilitiesObjType *newcapsobjtype, *capsobjtype = osync_capabilities_get_objtype(oldcaps, objtype);
 	OSyncList *c, *oldcapslist = osync_capabilities_objtype_get_caps(capsobjtype);
 
-	newcapsobjtype = osync_capabilities_objtype_new(newcaps, objtype, error);
+	newcapsobjtype = osync_capabilities_add_new_objtype(newcaps, objtype, error);
 	if (!newcapsobjtype)
 		goto error;
 
@@ -111,7 +111,7 @@ osync_bool caps_conv_generic(OSyncCapabilities *oldcaps, OSyncCapabilities *newc
 			continue;
 		}
 
-		OSyncCapability *newcap = osync_capability_new(newcapsobjtype, error);
+		OSyncCapability *newcap = osync_capabilities_add_new_capability(newcapsobjtype, error);
 		if (!newcap)
 			goto error;
 

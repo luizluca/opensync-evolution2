@@ -32,11 +32,11 @@ osync_bool evo2_translate_capabilities(OSyncCapabilities *caps, GList *fields, c
 	osync_assert(fields);
 	osync_assert(objtype);
 
-	OSyncCapabilitiesObjType *capsobjtype = osync_capabilities_objtype_new(caps, objtype, error);
+	OSyncCapabilitiesObjType *capsobjtype = osync_capabilities_add_new_objtype(caps, objtype, error);
 
 	for(; fields; fields = g_list_next(fields)) {
 
-		OSyncCapability *cap = osync_capability_new(capsobjtype, error);
+		OSyncCapability *cap = osync_capabilities_add_new_capability(capsobjtype, error);
 		if (!cap)
 			goto error;
 
