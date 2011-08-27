@@ -2,21 +2,21 @@
  * evolution2_sync - A plugin for the opensync framework
  * Copyright (C) 2004-2005  Armin Bauer <armin.bauer@opensync.org>
  * Copyright (C) 2007 Daniel Friedrich <daniel.friedrich@opensync.org>
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
- * 
+ *
  */
 #include <string.h>
 
@@ -39,7 +39,7 @@
 void free_osync_evo_calendar(void *data, void* notused)
 {
 	OSyncEvoCalendar *cal = (OSyncEvoCalendar *)data;
-	
+
 	if (cal->uri_key) {
 		free(cal->uri_key);
 		cal->uri_key = NULL;
@@ -117,7 +117,7 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 		goto error;
 
 	env->pluginInfo = osync_plugin_info_ref(info);
-		
+
 	osync_trace(TRACE_INTERNAL, "Setting change id: %s", osync_plugin_info_get_groupname(info));
 
 	env->change_id = g_strdup(osync_plugin_info_get_groupname(info));
@@ -129,7 +129,7 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 
 	if (!evo2_ebook_initialize(env, info, error))
 		goto error_free_env;
-	
+
 	if (!evo2_ecal_initialize(env, info, "event", "vevent20", error))
 		goto error_free_env;
 
@@ -138,7 +138,7 @@ static void *evo2_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncEr
 
 	if (!evo2_ecal_initialize(env, info, "note", "vjournal", error))
 		goto error_free_env;
-	
+
 	osync_trace(TRACE_EXIT, "%s: %p", __func__, env);
 	return (void *)env;
 
@@ -183,9 +183,9 @@ return version;
 static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, error);
-	
+
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
-	
+
 	OSyncList *l, *list = NULL;
 	list = osync_plugin_info_get_objtype_sinks(info);
 	for (l=list; l; l = l->next) {
@@ -240,23 +240,23 @@ osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 	OSyncPlugin *plugin = osync_plugin_new(error);
 	if (!plugin)
 		goto error;
-	
+
 	osync_plugin_set_name(plugin, "evo2-sync");
 	osync_plugin_set_longname(plugin, "Evolution 2.x");
 	osync_plugin_set_description(plugin, "Address book, calendar and task list of Evolution 2");
-	
-	osync_plugin_set_initialize(plugin, evo2_initialize);
-	osync_plugin_set_finalize(plugin, evo2_finalize);
-	osync_plugin_set_discover(plugin, evo2_discover);
+
+	osync_plugin_set_initialize_func(plugin, evo2_initialize);
+	osync_plugin_set_finalize_func(plugin, evo2_finalize);
+	osync_plugin_set_discover_func(plugin, evo2_discover);
 	osync_plugin_set_start_type(plugin, OSYNC_START_TYPE_PROCESS);
-	
+
 	if (!osync_plugin_env_register_plugin(env, plugin, error))
 			goto error;
 
 	osync_plugin_unref(plugin);
-	
+
 	return TRUE;
-	
+
 error:
 	osync_trace(TRACE_ERROR, "Unable to register: %s", osync_error_print(error));
 	osync_error_unref(error);
@@ -272,7 +272,7 @@ int get_version(void)
  * Bug 477227 – libebook isn't designed to be loaded and unloaded
  * see: http://bugzilla.gnome.org/show_bug.cgi?id=477227
  * see: http://mail.gnome.org/archives/evolution-hackers/2007-September/msg00027.html
- * also the other EDS client libraries; so prevent unloading this module as the api provides 
+ * also the other EDS client libraries; so prevent unloading this module as the api provides
  * this facility which is the same as would be the g_module_make_resident that is :
  * "Any future g_module_close() calls on the module will be ignored.".
  */
