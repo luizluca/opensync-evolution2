@@ -149,7 +149,7 @@ error:
 	return NULL;
 }
 
-static void evo2_finalize(void *data)
+static void evo2_finalize(OSyncPlugin *plugin, void *data)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, data);
 	OSyncEvoEnv *env = (OSyncEvoEnv *)data;
@@ -180,7 +180,7 @@ return version;
 
 /* Here we actually tell opensync which sinks are available and their capabilities */
 
-static osync_bool evo2_discover(OSyncPluginInfo *info, void *data, OSyncError **error)
+static osync_bool evo2_discover(OSyncPlugin *plugin, OSyncPluginInfo *info, void *data, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, data, info, error);
 
